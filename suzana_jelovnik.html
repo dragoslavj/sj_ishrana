@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>NutriFit – Jelovnik</title>
+<style>
+  :root {
+    --bg: #f5f8f0;
+    --card: #ffffff;
+    --primary: #2e7d32;
+    --primary-dark: #1b5e20;
+    --accent: #66bb6a;
+    --accent2: #f57f17;
+    --text: #2c2c2c;
+    --muted: #666;
+    --border: #d8eadb;
+    --section-bg: #f0f7f1;
+    --day-bg: #e8f5e9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* ── Header ── */
+  .site-header {
+    background: var(--primary);
+    color: white;
+    padding: 14px 56px;
+    position: sticky;
+    top: 0;
+    z-index: 300;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    text-align: center;
+  }
+  .site-header h1 { font-size: 1.1em; font-weight: 700; }
+  .site-header p { font-size: 0.78em; opacity: 0.85; margin-top: 2px; }
+
+  /* ── Burger ── */
+  #burger-btn {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    background: rgba(255,255,255,0.15); border: none; border-radius: 8px;
+    width: 42px; height: 42px;
+    display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px;
+    cursor: pointer; padding: 0; -webkit-tap-highlight-color: transparent;
+  }
+  #burger-btn span { display: block; width: 22px; height: 2px; background: white; border-radius: 2px; transition: all 0.25s; }
+  #burger-btn.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  #burger-btn.open span:nth-child(2) { opacity: 0; }
+  #burger-btn.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+  /* ── Drawer ── */
+  #drawer-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45); z-index: 400;
+  }
+  #drawer-overlay.visible { display: block; }
+  #toc-drawer {
+    position: fixed; top: 0; left: 0; bottom: 0;
+    width: min(82vw, 340px);
+    background: var(--card); z-index: 500;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+    transform: translateX(-100%); transition: transform 0.3s ease;
+    box-shadow: 3px 0 16px rgba(0,0,0,0.2);
+  }
+  #toc-drawer.open { transform: translateX(0); }
+  .drawer-header {
+    background: var(--primary); color: white;
+    padding: 16px 18px; font-size: 1em; font-weight: 700;
+    position: sticky; top: 0; z-index: 1;
+  }
+
+  /* ── TOC inside drawer ── */
+  .toc-week { border-bottom: 1px solid var(--border); }
+  .toc-week:last-child { border-bottom: none; }
+  .toc-week-sum {
+    padding: 12px 16px; cursor: pointer; list-style: none;
+    display: flex; align-items: baseline; gap: 8px;
+    -webkit-tap-highlight-color: rgba(46,125,50,0.08);
+    user-select: none;
+  }
+  .toc-week-sum::-webkit-details-marker { display: none; }
+  .toc-week-sum::after {
+    content: '›'; font-size: 1.2em; color: var(--muted);
+    transition: transform 0.2s; margin-left: auto; flex-shrink: 0;
+  }
+  details[open] > .toc-week-sum::after { transform: rotate(90deg); }
+  .toc-week-sum .sum-link {
+    font-weight: 700; font-size: 0.93em; color: var(--primary); text-decoration: none; flex: 1;
+  }
+  .toc-week-sum .sum-link:active { text-decoration: none; }
+  .toc-dates { font-size: 0.75em; color: var(--muted); white-space: nowrap; }
+  .toc-day-list { list-style: none; background: var(--section-bg); padding: 4px 0 8px 0; }
+  .toc-day-list li { padding: 0; }
+  .toc-day-link {
+    display: block; padding: 8px 16px 8px 32px;
+    color: var(--text); text-decoration: none; font-size: 0.88em;
+    border-left: 3px solid transparent;
+  }
+  .toc-day-link:active { background: rgba(46,125,50,0.08); border-left-color: var(--primary); }
+
+  /* ── Main content ── */
+  #content { padding: 12px 12px 60px; }
+
+  /* ── Week block ── */
+  .week-details {
+    background: var(--card);
+    border-radius: 12px;
+    margin-bottom: 14px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid var(--border);
+    scroll-margin-top: 70px;
+  }
+  .week-summary {
+    background: var(--primary);
+    color: white;
+    padding: 14px 18px;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    -webkit-tap-highlight-color: rgba(255,255,255,0.1);
+    user-select: none;
+  }
+  .week-summary::-webkit-details-marker { display: none; }
+  .week-summary::after {
+    content: '›'; font-size: 1.5em; margin-left: auto;
+    transition: transform 0.25s; opacity: 0.8;
+  }
+  details[open] > .week-summary::after { transform: rotate(90deg); }
+  .week-title { font-size: 1.05em; font-weight: 700; }
+  .week-dates { font-size: 0.8em; opacity: 0.85; }
+  .week-body { padding: 8px 10px 10px; }
+
+  /* ── Day block ── */
+  .day-details {
+    border-radius: 8px;
+    margin: 6px 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    scroll-margin-top: 70px;
+  }
+  .day-summary {
+    background: var(--day-bg);
+    padding: 11px 14px;
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    -webkit-tap-highlight-color: rgba(46,125,50,0.1);
+    user-select: none;
+  }
+  .day-summary::-webkit-details-marker { display: none; }
+  .day-summary::after {
+    content: '›'; font-size: 1.2em; color: var(--muted);
+    margin-left: auto; transition: transform 0.2s;
+  }
+  details[open] > .day-summary::after { transform: rotate(90deg); }
+  .day-badge {
+    background: var(--primary); color: white;
+    font-size: 0.7em; font-weight: 700;
+    padding: 2px 6px; border-radius: 4px; letter-spacing: 0.03em;
+  }
+  .day-name { font-weight: 700; font-size: 0.95em; color: var(--primary-dark); }
+
+  /* ── Meals ── */
+  .meals-list { padding: 6px 0; background: white; }
+  .meal-item {
+    padding: 10px 14px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .meal-item:last-child { border-bottom: none; }
+  .meal-label {
+    display: block;
+    font-size: 0.78em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent2);
+    margin-bottom: 4px;
+  }
+  .meal-text {
+    font-size: 0.92em;
+    line-height: 1.55;
+    color: var(--text);
+  }
+
+  /* ── Floating btn ── */
+  #back-to-top {
+    position: fixed; bottom: 24px; right: 16px;
+    background: var(--primary); color: white;
+    width: 44px; height: 44px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3em; text-decoration: none;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.25); z-index: 200;
+    -webkit-tap-highlight-color: transparent;
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <button id="burger-btn" aria-label="Otvori meni" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+  <h1>🥗 NutriFit – Jelovnik</h1>
+  <p>4 nedelje plana ishrane</p>
+</header>
+
+<div id="drawer-overlay"></div>
+<nav id="toc-drawer" aria-label="Sadržaj">
+  <div class="drawer-header">📅 PREGLED PO NEDELJAMA</div>
+  <div id="toc-body">
+    <details class="toc-week">
+      <summary class="toc-week-sum">
+        <a href="#week-1" class="sum-link">1. nedelja</a>
+        <span class="toc-dates">30.03. - 05.04.2026</span>
+      </summary>
+      <ul class="toc-day-list"><li><a href="#week-1-ponedeljak" class="toc-day-link">Ponedeljak</a></li><li><a href="#week-1-utorak" class="toc-day-link">Utorak</a></li><li><a href="#week-1-sreda" class="toc-day-link">Sreda</a></li><li><a href="#week-1-cetvrtak" class="toc-day-link">Četvrtak</a></li><li><a href="#week-1-petak" class="toc-day-link">Petak</a></li><li><a href="#week-1-subota" class="toc-day-link">Subota</a></li><li><a href="#week-1-nedelja" class="toc-day-link">Nedelja</a></li></ul>
+    </details>
+
+    <details class="toc-week">
+      <summary class="toc-week-sum">
+        <a href="#week-2" class="sum-link">2. nedelja</a>
+        <span class="toc-dates">06.04. - 12.04.2026</span>
+      </summary>
+      <ul class="toc-day-list"><li><a href="#week-2-ponedeljak" class="toc-day-link">Ponedeljak</a></li><li><a href="#week-2-utorak" class="toc-day-link">Utorak</a></li><li><a href="#week-2-sreda" class="toc-day-link">Sreda</a></li><li><a href="#week-2-cetvrtak" class="toc-day-link">Četvrtak</a></li><li><a href="#week-2-petak" class="toc-day-link">Petak</a></li><li><a href="#week-2-subota" class="toc-day-link">Subota</a></li><li><a href="#week-2-nedelja" class="toc-day-link">Nedelja</a></li></ul>
+    </details>
+
+    <details class="toc-week">
+      <summary class="toc-week-sum">
+        <a href="#week-3" class="sum-link">3. nedelja</a>
+        <span class="toc-dates">13.04. - 19.04.2026</span>
+      </summary>
+      <ul class="toc-day-list"><li><a href="#week-3-ponedeljak" class="toc-day-link">Ponedeljak</a></li><li><a href="#week-3-utorak" class="toc-day-link">Utorak</a></li><li><a href="#week-3-sreda" class="toc-day-link">Sreda</a></li><li><a href="#week-3-cetvrtak" class="toc-day-link">Četvrtak</a></li><li><a href="#week-3-petak" class="toc-day-link">Petak</a></li><li><a href="#week-3-subota" class="toc-day-link">Subota</a></li><li><a href="#week-3-nedelja" class="toc-day-link">Nedelja</a></li></ul>
+    </details>
+
+    <details class="toc-week">
+      <summary class="toc-week-sum">
+        <a href="#week-4" class="sum-link">4. nedelja</a>
+        <span class="toc-dates">20.04. - 26.04.2026</span>
+      </summary>
+      <ul class="toc-day-list"><li><a href="#week-4-ponedeljak" class="toc-day-link">Ponedeljak</a></li><li><a href="#week-4-utorak" class="toc-day-link">Utorak</a></li><li><a href="#week-4-sreda" class="toc-day-link">Sreda</a></li><li><a href="#week-4-cetvrtak" class="toc-day-link">Četvrtak</a></li><li><a href="#week-4-petak" class="toc-day-link">Petak</a></li><li><a href="#week-4-subota" class="toc-day-link">Subota</a></li><li><a href="#week-4-nedelja" class="toc-day-link">Nedelja</a></li></ul>
+    </details></div>
+</nav>
+
+<main id="content">
+
+  <details class="week-details" id="week-1">
+    <summary class="week-summary">
+      <div class="week-title">1. nedelja</div>
+      <div class="week-dates">30.03. - 05.04.2026</div>
+    </summary>
+    <div class="week-body">
+    <details class="day-details" id="week-1-ponedeljak">
+      <summary class="day-summary">
+        <span class="day-badge">Mo</span>
+        <span class="day-name">Ponedeljak</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Omletjaje mladisirpo recepturi + 2 kriške integralnog pšeničnog hleba + salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">2jabuke(bez kore) + 10 bademaili oraha *možeuvidu kompotaili pečenoili sveževoće</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Pilećebelo meso250 g+ grilovane tikvice150 g+ salata + 1 kriška integralnog hleba</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Voćnipuding porecepturi</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-1-utorak">
+      <summary class="day-summary">
+        <span class="day-badge">Tu</span>
+        <span class="day-name">Utorak</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Ovsenakaša sa borovnicama porecepturi(5 kašikaovsenih pahuljica)+ grčkijogurt 150 g</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">2integralna dvopeka+ sirninamaz 100 g</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Musakasa krompirom 400 g + salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Jogurt300 ml +150 g borovnicaili malina(voćni jogurt)</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-1-sreda">
+      <summary class="day-summary">
+        <span class="day-badge">We</span>
+        <span class="day-name">Sreda</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">3fittpršuta sendvičapo recepturi+ salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">2integralna dvopeka+ sirninamaz 100 g</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Musakasa krompirom 400 g + supa odpovrća 200 ml+ salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Voćnasalata 300 g(3vrste voćapo izboru)+ šakaorašastih plodova</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-1-cetvrtak">
+      <summary class="day-summary">
+        <span class="day-badge">Th</span>
+        <span class="day-name">Četvrtak</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Omletjaje pilećaprsa porecepturi +2kriške integralnog pšeničnog hleba+ salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">Voćnasalata 350 g(3 vrstevoćaiz preporuka) +cimet</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Pastrmka 250 g+ bareni pirinač150 g +salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Chiapuding porecepturi (sabiljnim mlekom)</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-1-petak">
+      <summary class="day-summary">
+        <span class="day-badge">Fr</span>
+        <span class="day-name">Petak</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Integralna tortilja1 kom + sirni namaz50 g+ šunka / pileća prsa100 g+ salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">2kruške(bez kore) *možeu vidu kompotaili pečenoili sveževoće</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Juneći ćevapi200 g +pečeni krompir 150 g + salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">1jabuka(bez kore) + 10 badema</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-1-subota">
+      <summary class="day-summary">
+        <span class="day-badge">Sa</span>
+        <span class="day-name">Subota</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Ovsenakaša sašumskim voćempo recepturi(5 kašika ovsenih pahuljica)+ grčkijogurt 150 g</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">Užinapo želji</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Piletinasa spanaćem 370 g + salata +1kriška integralnog hleba</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Kiselomleko 300 ml + 2 kašike mlevenog lana / chia semenki</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-1-nedelja">
+      <summary class="day-summary">
+        <span class="day-badge">Su</span>
+        <span class="day-name">Nedelja</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Mafinisa jajimapo recepturi3 komada+ salata+ ceđenisokod jabuke</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">Jagode250 g ilidrugovoće poželji+ cimet</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Piletinasa spanaćem 370 g + salata +1kriška integralnog hleba</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">2jabuke(bez kore) + 10 lešnika</p>
+      </div>
+      </div>
+    </details>
+    </div>
+  </details>
+
+  <details class="week-details" id="week-2">
+    <summary class="week-summary">
+      <div class="week-title">2. nedelja</div>
+      <div class="week-dates">06.04. - 12.04.2026</div>
+    </summary>
+    <div class="week-body">
+    <details class="day-details" id="week-2-ponedeljak">
+      <summary class="day-summary">
+        <span class="day-badge">Mo</span>
+        <span class="day-name">Ponedeljak</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Omletjaje šunkapo recepturi + 2 kriške integralnog pšeničnog hleba+ salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">Voćnasalata 350 g(3 vrstevoća)+ cimet</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Rižotosa mesom400 g +čorbaod povrća200 ml + salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Voćni pudingpo recepturi</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Oslić/ pastrmka150 g + kukuruz šećerac100 g +salata Ćureći burger150 g +kukuruz</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-2-utorak">
+      <summary class="day-summary">
+        <span class="day-badge">Tu</span>
+        <span class="day-name">Utorak</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">3integralna sendvičapo željiiz recepture+ salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">1jabuka(bez kore) + 1 banana+ cimet</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Tikvice punjene mesom370 g +salata + 1 kriška integralnog hleba</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Jogurt300 ml +10badema ililešnika</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Salatasa tunompo recepturi(bez paradajza) Oslić200 g+ 100 g grilovanog</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-2-sreda">
+      <summary class="day-summary">
+        <span class="day-badge">We</span>
+        <span class="day-name">Sreda</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Integralna tortilja1 kom +sirni namaz(50 g)+ 100 gćurećih ilipilećihprsa (suhomesnato) +salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">Chiapuding porecepturi (sabiljnim mlekom)</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Tikvice punjene mesom370 g +salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">2pirinčane galete + puter odorašastnih plodova(po izboru)+ voćkapoželji</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Ćurećiburger 150 g+ grilovano povrćepo želji100 g+ salata Obroksalata odnemasnog sirapo</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-2-cetvrtak">
+      <summary class="day-summary">
+        <span class="day-badge">Th</span>
+        <span class="day-name">Četvrtak</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Ovsenakaša sa borovnicama porecepturi (5kašika ovsenih pahuljica)+ 1kašika kikiriki putera</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">Kiselomleko 300 ml + 2 kašike mlevenog lana</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Pilećifile 250 g + pire krompir 150 g + salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">2jabuke (bezkore)+ 10lešnika</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Obroksalata od nemasnog sirapo recepturi (bez paradajza) Salatasa jajimapo recepturi</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-2-petak">
+      <summary class="day-summary">
+        <span class="day-badge">Fr</span>
+        <span class="day-name">Petak</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Tunjevinaili sardina130 g +humus namaz50 g+ 3kriške integralnog pšeničnog hleba + salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">2kruške(bez kore) + cimet</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Pastrmka 250 g + pire krompir150 g +salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Sojinjogurt 250 ml + 150 g višanja / kupina (voćnijogurt)</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Salatasa tunompo recepturi (bez paradajza) Salatasa tunompo recepturi(bez</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-2-subota">
+      <summary class="day-summary">
+        <span class="day-badge">Sa</span>
+        <span class="day-name">Subota</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Avokadojaje tostod2-3 celajaja + 2 kriške integralnog pšeničnog hleba+ salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">1banana+ grčkijogurt 150 g + šaka orašastih plodova</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Kuvanojelo poželjiiz recepture 400 g + salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Voćni pudingpo recepturi</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Mesood ručka200 g+ salata Integralna testeninapo željiiz</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-2-nedelja">
+      <summary class="day-summary">
+        <span class="day-badge">Su</span>
+        <span class="day-name">Nedelja</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Danpo želji</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Omletili kuvana2cela jaja + 50 g pršute + salata</p>
+      </div>
+      </div>
+    </details>
+    </div>
+  </details>
+
+  <details class="week-details" id="week-3">
+    <summary class="week-summary">
+      <div class="week-title">3. nedelja</div>
+      <div class="week-dates">13.04. - 19.04.2026</div>
+    </summary>
+    <div class="week-body">
+    <details class="day-details" id="week-3-ponedeljak">
+      <summary class="day-summary">
+        <span class="day-badge">Mo</span>
+        <span class="day-name">Ponedeljak</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">3fittpršuta sendvičapo recepturi+ salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">Jagode250 g ilidrugovoće poželji + 10 badema</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Oslić250 g+ 150gkukuruz šećerca+ salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">1-2kruške (bezkore) + 3 kokoskuglice</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Ćureći / pileći burger200 g+ salata + 1 kašikasenfa poželji</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-3-utorak">
+      <summary class="day-summary">
+        <span class="day-badge">Tu</span>
+        <span class="day-name">Utorak</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Omletjaje pilećaprsapo recepturi + 2 kriške integralnog hleba+ icebergsalata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">2kruške(bez kore) + 1 štanglacrne čokolade</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Gulašsa špagetamaod tikvica370 g+ salata + 1 kriška integralnog hleba</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Voćepoželji 350 g + 10 lešnika</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Salatasa jajimapo recepturi</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-3-sreda">
+      <summary class="day-summary">
+        <span class="day-badge">We</span>
+        <span class="day-name">Sreda</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">3kriške integralnog pšeničnog hleba + humus namaz (kupovni)50 g +tunjevina 100 g + salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">Voćnasalata 350 g(3vrste voća) + 10 lešnika</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Gulašsa špagetamaod tikvica370 g+ mixzelenih salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Chiapuding porecepturi (sabiljnim mlekom)</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Integralna testeninapo željiiz receptura350 g +salata</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-3-cetvrtak">
+      <summary class="day-summary">
+        <span class="day-badge">Th</span>
+        <span class="day-name">Četvrtak</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">3kriške integralnog pšeničnog hleba+ sirninamaz 50 g+ goveđa pršuta70 g +salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">2jabuke (bezkore) +1štangla crne čokolade</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Pastrmka 250 g + pire od krompira 150 g+ salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Pola avokada izgnječitisa 100 g mladogsira +2 integralna dvopeka</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Ćureći burger 150 g+ grilovane tikvice 100 g+ salata</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-3-petak">
+      <summary class="day-summary">
+        <span class="day-badge">Fr</span>
+        <span class="day-name">Petak</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Integralna tortilja1 kom +sirko namaz(50 g) +70 g ćurećih ilipilećih prsa (suhomesnat o) + salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">1banana + 1 kruška(bez kore) + cimet</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Ćuretinasa mešanim povrćem 370 g + salata +1kriška integralnog hleba</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Polaavokada izgnječitisa 100gmladog sira + 2 integralna dvopeka</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Salatasa tunompo recepturi (bez paradajza)</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-3-subota">
+      <summary class="day-summary">
+        <span class="day-badge">Sa</span>
+        <span class="day-name">Subota</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Ovsene pahuljice5 kašika (natopitisa 50gbiljnog mlekaili vrućevode) +1merica whey proteina+ voće300 g+ 10orahaili lešnika</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">Jogurt300 ml + 150 g borovnica</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Ćuretinasa mešanim povrćem 370 g + salata +1kriška integralnog hleba</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Voćni pudingpo recepturi</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Obroksalata odnemasnog sirapo recepturi (bez paradajza)</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-3-nedelja">
+      <summary class="day-summary">
+        <span class="day-badge">Su</span>
+        <span class="day-name">Nedelja</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Omletsa povrćem (100 g spanaća)od2- 3celajaja + 2 kriške integralnog hleba + salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">Voćnasalata 350 g(3vrste dozvoljenog voća) + cimet</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Rižotosa povrćempo izboru400 g+ salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">1-2jabuke (bezkore)+ 10lešnika</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Junećićevapi 200 g + salata</p>
+      </div>
+      </div>
+    </details>
+    </div>
+  </details>
+
+  <details class="week-details" id="week-4">
+    <summary class="week-summary">
+      <div class="week-title">4. nedelja</div>
+      <div class="week-dates">20.04. - 26.04.2026</div>
+    </summary>
+    <div class="week-body">
+    <details class="day-details" id="week-4-ponedeljak">
+      <summary class="day-summary">
+        <span class="day-badge">Mo</span>
+        <span class="day-name">Ponedeljak</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">3integralna sendvičapo željiiz recepture+ salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">2kruške (bezkore) *kompotili pečeneili svežeako prijaju</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Obrok salatasa žitaricama porecepturi</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Chiapuding porecepturi (sabiljnim mlekom)</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Pilećifile 150 g+ kukuruz šećerac100 g + salata</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-4-utorak">
+      <summary class="day-summary">
+        <span class="day-badge">Tu</span>
+        <span class="day-name">Utorak</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Omletjaje šunkapo recepturi + 2 kriške integralnog hleba+ iceberg salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">1banana+ grčkijogurt 150 g + cimet</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Juneći ćevapi200 g +bareni pirinač150 g +salata + 1 kriška integralnog hleba</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Voćnasalata 300 g(3 vrste dozvoljenog voća) + 10 lešnika+ cimet</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Zdravacezar salatapo recepturi (150 g piletine)- bez</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-4-sreda">
+      <summary class="day-summary">
+        <span class="day-badge">We</span>
+        <span class="day-name">Sreda</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">2palačinke bezjaja+ nutelapo recepturi+ čajodnane sacimetom</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">Jogurt300 ml + 2 kašikechia semenki</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Krompir paprikaš 400 g+ salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">1kruška (bezkore)</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Salatasa tunompo recepturi (bez paradajza)</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-4-cetvrtak">
+      <summary class="day-summary">
+        <span class="day-badge">Th</span>
+        <span class="day-name">Četvrtak</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">3fittpršuta sendvičapo recepturi+ salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">Polaavokada izgnječitisa 100gmladog sira + 2 integralna dvopeka</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Krompir paprikaš400 g + salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Voćnasalata 300 g(3vrste voća) + cimet</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Integralna testeninapo željiiz receptura 350 g + salata</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-4-petak">
+      <summary class="day-summary">
+        <span class="day-badge">Fr</span>
+        <span class="day-name">Petak</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Omletjaje mladisirpo recepturi+ 2kriške integralnog hleba+ salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">Pola avokada izgnječitisa 100 g mladogsira +2 integralna dvopeka</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Oslić250 g +bareni pirinač150 g +salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Voćni pudingpo recepturi</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Juneći ćevapi200 g +salata</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-4-subota">
+      <summary class="day-summary">
+        <span class="day-badge">Sa</span>
+        <span class="day-name">Subota</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Sirninamaz (kupovni) 50 g + 70 g pršute + 3 kriške integralnog pšeničnog hleba + salata</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">2jabukeili kruške(bez kore)</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Gulašsa mesom370 g +salata + 1 kriška integralnog hleba</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">1jabuka(bez kore) + 10 bademaili Pilećačorba 300 ml + 2 integralna dvopeka</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Rižotosa povrćempo izboru350 g+ salata</p>
+      </div>
+      </div>
+    </details>
+    <details class="day-details" id="week-4-nedelja">
+      <summary class="day-summary">
+        <span class="day-badge">Su</span>
+        <span class="day-name">Nedelja</span>
+      </summary>
+      <div class="meals-list">
+      <div class="meal-item">
+        <span class="meal-label">🍳 Doručak</span>
+        <p class="meal-text">Ovsenakaša sašumskim voćempo recepturi(5 kašika ovsenih pahuljica)+ grčkijogurt 150 g</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍎 Užina 1</span>
+        <p class="meal-text">Pilećačorba 300 ml + 2 integralna dvopeka</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🍽️ Ručak</span>
+        <p class="meal-text">Gulašsa mesom370 g +salata + 1 kriška integralnog hleba</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🥜 Užina 2</span>
+        <p class="meal-text">Jogurt300 ml +10badema/ lešnika</p>
+      </div>
+      <div class="meal-item">
+        <span class="meal-label">🌙 Večera</span>
+        <p class="meal-text">Salatasa jajimapo recepturi</p>
+      </div>
+      </div>
+    </details>
+    </div>
+  </details>
+</main>
+
+<a href="#" id="back-to-top" title="Na vrh">↑</a>
+
+<script>
+(function() {
+  var btn = document.getElementById('burger-btn');
+  var drawer = document.getElementById('toc-drawer');
+  var overlay = document.getElementById('drawer-overlay');
+  function open() {
+    drawer.classList.add('open'); overlay.classList.add('visible');
+    btn.classList.add('open'); btn.setAttribute('aria-expanded','true');
+    document.body.style.overflow = 'hidden';
+  }
+  function close() {
+    drawer.classList.remove('open'); overlay.classList.remove('visible');
+    btn.classList.remove('open'); btn.setAttribute('aria-expanded','false');
+    document.body.style.overflow = '';
+  }
+  btn.addEventListener('click', function() { drawer.classList.contains('open') ? close() : open(); });
+  overlay.addEventListener('click', close);
+  drawer.addEventListener('click', function(e) {
+    if (e.target.closest('a[href]')) close();
+  });
+})();
+</script>
+</body>
+</html>
